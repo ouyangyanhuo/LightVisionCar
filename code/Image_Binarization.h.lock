@@ -1,0 +1,7 @@
+#ifndef _IMAGE_BINARIZATION_H_
+#define _IMAGE_BINARIZATION_H_
+
+uint8_t Adapt_OtsuThreshold(uint8_t* image, uint8_t col, uint8_t row, uint8_t* threshold);
+void Get_Binary_graph(uint8_t(*Original_image)[IMAGE_W], uint8_t(*Processing_image)[IMAGE_W], uint8_t Threshold, int16_t Row, int16_t Col);
+
+#endif

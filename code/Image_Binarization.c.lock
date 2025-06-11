@@ -1,0 +1,97 @@
+/*
+ *
+ *  Name: Image_Binarization.c
+ *  Created on: 2025/2/24
+ *  Author: Magneto
+ *
+ */
+
+#include "zf_common_headfile.h"
+
+//-------------------------------------------------------------------------------------------------------------------
+//  函数简介     简化大津法  1.3ms  计算量大时 1.5ms    计算量小时0.7ms（优化ing）
+//  返回参数     阈值
+//  使用示例     Nope
+//  备注信息     image-灰度图；col-列；row-行；threshold-阈值
+//-------------------------------------------------------------------------------------------------------------------
+// 注意计算阈值的一定要使用原图像
+uint8_t Adapt_OtsuThreshold(uint8_t* image, uint8_t col, uint8_t row, uint8_t* threshold)
+{
+    uint8_t width = col;
+    uint8_t height = row;
+    int16_t pixelCount[Gray];  //每个像素点的个数
+    float pixelPro[Gray];  //每个像素点占总像素点的比例
+    int16_t pixelSum1 = width * height / 4;
+    int16_t i, j;
+    uint8_t* data = image;  //指向像素数据的指针
+
+    for (i = 0; i < Gray; i++) {
+        pixelCount[i] = 0;
+        pixelPro[i] = 0;
+    }
+
+    uint32_t gray_sum = 0;
+    //统计灰度级中每个像素在整幅图像中的个数
+    for (i = 0; i < height; i += 2) {
+        for (j = 0; j < width; j += 2) {
+            //将当前的点的像素值作为计数数组的下标
+            pixelCount[(int)data[i * width + j]]++;
+            //灰度值总和
+            gray_sum += (int)data[i * width + j];        
+        }
+    }
+
+    //计算每个像素值的点在整幅图像中的比例
+
+    for (i = 0; i < Gray / 2; i++) {
+        pixelPro[i] = (float)pixelCount[i] / pixelSum1;
+    }
+
+    //遍历灰度级[0,255]
+    float w0, w1, u0tmp, u1tmp, u0, u1, u, deltaTmp, deltaMax = 0;
+
+    w0 = w1 = u0tmp = u1tmp = u0 = u1 = u = deltaTmp = 0;
+    for (j = 0; j < Gray / 2; j++) {
+
+        //背景部分每个灰度值的像素点所占比例之和   即背景部分的比例
+        w0 += pixelPro[j];  
+        //背景部分 每个灰度值的点的比例 *灰度值
+        u0tmp += j * pixelPro[j];  
+
+        w1 = 1 - w0;
+        u1tmp = gray_sum / pixelSum1 - u0tmp;
+
+        u0 = u0tmp / w0;              //背景平均灰度
+        u1 = u1tmp / w1;              //前景平均灰度
+        u = u0tmp + u1tmp;            //全局平均灰度
+        deltaTmp = w0 * (u0 - u) * (u0 - u) + w1 * (u1 - u) * (u1 - u);
+        if (deltaTmp > deltaMax) {
+            deltaMax = deltaTmp;
+            *threshold = (uint8)j;
+        }
+        if (deltaTmp < deltaMax) {
+            *threshold += 0;
+            break;
+        }
+    }
+    *threshold = (*threshold * 12) / 10;  // 提高 20%
+    if (*threshold > 200) *threshold = 200;  // 防止溢出
+    return *threshold;
+}
+//-------------------------------------------------------------------------------------------------------------------
+//  函数简介     灰度图转换二值化图 1.7ms
+//  返回参数     Nope
+//  使用示例     Nope
+//  备注信息     Original_image-灰度图；Processing_image-二值化图；Row-行；Col-列
+//-------------------------------------------------------------------------------------------------------------------
+void Get_Binary_graph(uint8_t(*Original_image)[IMAGE_W], uint8_t(*Processing_image)[IMAGE_W], uint8_t Threshold, int16_t Row, int16_t Col)
+{
+    for (int16_t x = 0; x < Row; x++)
+    {
+        for (int16_t y = 0; y < Col; y++)
+        {
+            if (Original_image[x][y] >= Threshold) Processing_image[x][y] = WHITE;
+            else Processing_image[x][y] = BLACK;
+        }
+    }
+}
